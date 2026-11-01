@@ -1,0 +1,40 @@
+# Local working files and temporary exports
+/tmp/
+/.tabbit*
+~$*
+**/~$*
+.DS_Store
+Thumbs.db
+
+# Dependencies, tools, builds, and test artifacts
+node_modules/
+.pnpm-store/
+.local-tools/
+.local-logs/
+.next/
+.next-*/
+__pycache__/
+*.pyc
+.venv/
+venv/
+test-results/
+playwright-report/
+blob-report/
+coverage/
+*.tsbuildinfo
+
+# Machine-specific credentials and runtime data
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite*
+*.db
+server-providers*.yml
+/OpenMAIC/data/
+/OpenMAIC/logs/
+/OpenMAIC/openmaic-*.log
+/OpenMAIC/openmaic-http-*.txt
+/OpenMAIC/openmaic-http-*.html

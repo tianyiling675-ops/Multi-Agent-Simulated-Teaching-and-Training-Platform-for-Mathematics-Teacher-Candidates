@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "lib/teacher-training/**/*.ts",
+    "components/teacher-training/**/*.tsx",
+    "app/teacher-training/**/*.tsx",
+    "app/api/teacher-training/**/*.ts",
+    "tests/teacher-training/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "openclaw", "render-service"]
+}

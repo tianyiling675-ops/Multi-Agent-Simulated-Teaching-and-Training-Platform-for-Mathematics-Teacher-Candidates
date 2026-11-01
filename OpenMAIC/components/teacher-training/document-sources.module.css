@@ -1,0 +1,62 @@
+.sources {
+  border: 1px solid #dce3d9;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.sources h3 {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.sources h3 span {
+  color: #728077;
+  margin-left: 8px;
+  font-size: 11px;
+}
+.sources details {
+  border-top: 1px solid #e8ede5;
+  padding: 10px 0;
+}
+.sources summary {
+  cursor: pointer;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.sources summary span {
+  margin-left: 8px;
+  font-size: 10px;
+  color: #728077;
+}
+.sources p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #7b6036;
+  margin: 10px 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  align-items: center;
+}
+.actions a,
+.actions button {
+  font-size: 11px;
+  color: #355f4f;
+}
+.actions a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.actions button {
+  background: transparent;
+  border: 1px solid #dce3d9;
+  border-radius: 6px;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
