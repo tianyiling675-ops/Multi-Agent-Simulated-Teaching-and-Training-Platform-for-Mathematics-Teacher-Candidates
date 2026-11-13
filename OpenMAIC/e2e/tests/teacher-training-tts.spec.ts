@@ -161,7 +161,9 @@ test('Qwen student audio follows speech settings, pauses immediately, and preser
       .catch(() => {});
   });
   await page.goto(`/teacher-training/sessions/${session.id}/classroom`);
-  await page.getByRole('button', { name: '开始课堂', exact: true }).click();
+  const start = page.getByRole('button', { name: '开始课堂', exact: true });
+  await expect(start).toBeEnabled({ timeout: 120_000 });
+  await start.click();
   await page.getByRole('button', { name: '学生朗读关', exact: true }).click();
   await expect(page.getByRole('button', { name: '学生朗读开', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -207,7 +209,7 @@ test('Qwen student audio follows speech settings, pauses immediately, and preser
   failTts = true;
   await page.getByRole('button', { name: '继续课堂', exact: true }).click();
   await student.click();
-  await expect(page.getByRole('status')).toContainText('学生文字已保留');
+  await expect(page.getByRole('status').filter({ hasText: '学生文字已保留' })).toBeVisible();
   await expect(page.getByLabel('课堂对话记录')).toContainText(answer);
   await expect(page.getByRole('button', { name: '重试学生回应', exact: true })).not.toBeVisible();
   expect(round).toBe(2);
