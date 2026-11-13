@@ -74,6 +74,8 @@ export const pageSchema = z
     title: z.string().trim().min(1).max(200),
     canvas: slideSchema,
     source: z.enum(['uploaded', 'generated', 'edited']),
+    // Optional: historical snapshots keep their original shape and hash.
+    teacherNotes: z.string().max(5000).optional(),
   })
   .strict();
 export type TrainingPage = z.infer<typeof pageSchema>;
@@ -132,6 +134,7 @@ export interface ClassroomRun {
   activeStudentId: string | null;
   studentStates: Record<string, StudentConceptState[]>;
   turns: Record<string, StudentTurn>;
+  voiceCall?: { triggerId: string; id?: string };
 }
 export type ClassroomView = Pick<
   ClassroomRun,

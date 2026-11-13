@@ -408,7 +408,11 @@ export function SlideNavRail() {
             >
               {/* Desktop client: the Electron title bar already shows the brand icon + name, so the edit rail doesn't repeat it;
                   returning home is handled by the edit bar's CommandBar back arrow. */}
-              <img src={brand.logoSrc} alt={brand.productName} className="h-6 w-auto" />
+              <img
+                src={brand.logoSrc}
+                alt={brand.productName}
+                className="h-auto max-h-10 w-full max-w-[150px]"
+              />
             </button>
           )}
         </div>

@@ -17,12 +17,16 @@ test('PPTX preparation, editor, independent classroom, board and recovery', asyn
     }),
   );
   await page.goto('/teacher-training');
+  await expect(page.getByRole('button', { name: '新建课题', exact: true })).toBeEnabled({
+    timeout: 120_000,
+  });
   await page.getByRole('button', { name: '新建课题', exact: true }).click();
   await page.getByLabel('课题名称').fill('课堂验收 · 椭圆');
   await page.getByLabel('学段与年级').fill('高中二年级');
   await page.getByLabel('本次教学范围').fill('长半轴方向判断与变式练习');
   await page.getByRole('button', { name: '创建备课' }).click();
-  await expect(page.getByRole('heading', { name: '准备你的课堂' })).toBeVisible();
+  await page.getByRole('button', { name: '课件与练习', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '课件准备' })).toBeVisible();
   const deck = new PptxGenJS();
   deck.layout = 'LAYOUT_WIDE';
   const slide = deck.addSlide();
@@ -39,8 +43,12 @@ test('PPTX preparation, editor, independent classroom, board and recovery', asyn
   await page.getByLabel('页面标题').fill('椭圆的标准方程');
   await page.getByRole('button', { name: '编辑页面', exact: true }).click();
   await expect(page.getByText('双击文字编辑 · 拖动调整 · 修改保存在草稿')).toBeVisible();
-  await page.getByText('比较分母，说明长半轴的方向。', { exact: true }).scrollIntoViewIfNeeded();
+  await page
+    .getByTestId('training-slide-editor')
+    .getByText('比较分母，说明长半轴的方向。', { exact: true })
+    .evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const textBox = await page
+    .getByTestId('training-slide-editor')
     .getByText('比较分母，说明长半轴的方向。', { exact: true })
     .boundingBox();
   expect(textBox).not.toBeNull();
@@ -52,10 +60,10 @@ test('PPTX preparation, editor, independent classroom, board and recovery', asyn
   await page.getByLabel('页面标题').click();
   await page.screenshot({ path: 'test-results/teacher-courseware-editor.png', fullPage: true });
   await page.getByRole('button', { name: '预览', exact: true }).click();
-  await page.getByRole('button', { name: '确认本轮材料' }).click();
+  await page.getByRole('button', { name: '确认试讲版本并继续' }).click();
   await expect(page.getByRole('status').filter({ hasText: '材料版本 V1 已确认' })).toBeVisible();
-  await page.getByRole('button', { name: '02 班级与轮次' }).click();
-  await page.getByRole('button', { name: '准备本轮课堂' }).click();
+  await page.getByRole('button', { name: '02 班级配置' }).click();
+  await page.getByRole('button', { name: '进入模拟课堂' }).click();
   await expect(page).toHaveURL(new RegExp('/sessions/training_.+/classroom'), { timeout: 120_000 });
   const url = page.url();
   const sessionId = url.split('/').at(-2)!;
@@ -89,7 +97,7 @@ test('PPTX preparation, editor, independent classroom, board and recovery', asyn
     .toBe(3);
   await page.screenshot({ path: 'test-results/teacher-classroom-whiteboard.png' });
   await page.getByLabel('教师课堂发言').fill('谁能解释这个椭圆的长半轴为什么沿纵轴？');
-  await page.getByLabel('发言方式').selectOption('question');
+  await page.getByRole('button', { name: '全班提问', exact: true }).click();
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: '模型暂时不可用' })).toBeVisible();
   await expect(page.getByLabel('课堂对话记录')).toContainText('长半轴为什么沿纵轴');
@@ -229,7 +237,7 @@ test('student hands, published reply and interruption UI with controlled model t
   await page.goto('/teacher-training/sessions/' + session.id + '/classroom');
   await page.getByRole('button', { name: '开始课堂', exact: true }).click();
   await page.getByLabel('教师课堂发言').fill('谁能解释方向？');
-  await page.getByLabel('发言方式').selectOption('question');
+  await page.getByRole('button', { name: '全班提问', exact: true }).click();
   await page.getByRole('button', { name: '发送', exact: true }).click();
   const student = page.getByRole('button', { name: '点名小林', exact: true });
   await expect(student).toHaveAttribute('data-hand', 'true');

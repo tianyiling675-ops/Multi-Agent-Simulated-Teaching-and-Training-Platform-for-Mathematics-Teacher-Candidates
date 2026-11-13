@@ -23,7 +23,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // Whitelist: access-code endpoints, health check
-  if (pathname.startsWith('/api/access-code/') || pathname === '/api/health') {
+  if (
+    pathname.startsWith('/api/access-code/') ||
+    pathname === '/api/health' ||
+    // This server-to-server endpoint validates its own bridge credential in Node.
+    (pathname === '/api/teacher-training/voice-bridge' && request.method === 'POST')
+  ) {
     return NextResponse.next();
   }
 

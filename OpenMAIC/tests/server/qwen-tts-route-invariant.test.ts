@@ -34,6 +34,12 @@ describe('Qwen TTS route model-follows-voice invariant', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  it('passes request cancellation through to the provider', async () => {
+    const req = request('Cherry', 'qwen3-tts-flash');
+    await POST(req);
+    expect(mocks.generateTTS.mock.calls[0][0].signal).toBe(req.signal);
+  });
+
   it('never dispatches a catalog voice through VC even with a stale VC model', async () => {
     const response = await POST(request('Cherry', QWEN_TTS_VOICE_CLONE_MODEL));
     expect(response.status).toBe(200);

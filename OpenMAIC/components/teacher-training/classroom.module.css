@@ -1,5 +1,4 @@
-.classroom,
-.preparationPanel {
+.classroom {
   --ink: #263e36;
   --muted: #728077;
   --accent: #355f4f;
@@ -15,8 +14,7 @@
   background: #eef1ed;
   overflow: hidden;
 }
-.classroom button,
-.preparationPanel button {
+.classroom button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -30,24 +28,20 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-.classroom button:hover,
-.preparationPanel button:hover {
+.classroom button:hover {
   background: #e8efe8;
 }
-.classroom button:disabled,
-.preparationPanel button:disabled {
+.classroom button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.classroom button:focus-visible,
-.preparationPanel button:focus-visible {
+.classroom button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 .classroom input,
 .classroom textarea,
-.classroom select,
-.preparationPanel input {
+.classroom select {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
@@ -55,8 +49,7 @@
   background: white;
   min-width: 0;
 }
-.classroom .primary,
-.preparationPanel .primary {
+.classroom .primary {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
@@ -103,6 +96,80 @@
     monospace;
   white-space: nowrap;
 }
+.faceCapture {
+  min-width: 0;
+  max-height: 100%;
+  overflow: auto;
+  align-self: start;
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+}
+.faceHeading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.facePreview {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e7ece6;
+  color: var(--accent);
+}
+.facePreview video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.facePreview[data-preview='true'] video {
+  opacity: 1;
+}
+.facePreview > div {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+  font-size: 11px;
+}
+.faceControls {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.faceControls label,
+.faceControls small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.classroom .faceControls select,
+.classroom .faceControls button {
+  min-width: 0;
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 12px;
+}
+.faceControls button svg {
+  flex-shrink: 0;
+}
+.faceCapture small {
+  color: var(--muted);
+}
+.faceCapture small[role='alert'] {
+  color: #9f382c;
+}
 .body {
   flex: 1;
   display: grid;
@@ -129,8 +196,7 @@
   padding: 8px;
   text-align: left;
 }
-.rail button[aria-pressed='true'],
-.prepRail button[aria-pressed='true'] {
+.rail button[aria-pressed='true'] {
   border-color: var(--accent);
   background: #e7eee5;
 }
@@ -156,6 +222,32 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  container-type: inline-size;
+}
+.stageContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(180px, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 180px;
+  margin: 12px 14px;
+}
+.stageContent[data-camera='true'] {
+  grid-template-columns: minmax(0, 1fr) clamp(164px, 24%, 240px);
+}
+@container (max-width: 570px) {
+  .stageContent[data-camera='true'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 1fr) auto;
+  }
+  .stageContent .faceCapture {
+    grid-template-columns: minmax(90px, 120px) minmax(0, 1fr);
+    align-items: start;
+  }
+  .faceHeading {
+    grid-column: 1 / -1;
+  }
 }
 .stageToolbar {
   display: flex;
@@ -177,7 +269,7 @@
   position: relative;
   flex: 1;
   min-height: 180px;
-  margin: 12px 18px;
+  min-width: 0;
   border: 1px solid #dce3dc;
   border-radius: 14px;
   overflow: hidden;
@@ -442,35 +534,6 @@
   margin-top: 22px;
   justify-content: flex-end;
 }
-.preparationPanel {
-  grid-column: 1 / -1;
-  padding: 24px;
-  background: #f7f9f5;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  margin-bottom: 28px;
-}
-.sectionHeading {
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-}
-.sectionHeading h2 {
-  font-size: 25px;
-  margin: 6px 0;
-  font-weight: 600;
-}
-.sectionHeading p {
-  color: var(--muted);
-  font-size: 13px;
-}
-.eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.17em;
-  color: var(--muted);
-}
 .toolrow {
   display: flex;
   gap: 8px;
@@ -481,86 +544,6 @@
   flex: 1;
   min-width: 100px;
   font-size: 13px;
-}
-.outline {
-  background: #fff;
-  padding: 16px;
-  margin-top: 16px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  font-size: 13px;
-}
-.outline ol {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 24px;
-  list-style: decimal inside;
-  margin: 12px 0;
-}
-.prepDeck {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 14px;
-  margin-top: 18px;
-}
-.prepRail {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 560px;
-  overflow: auto;
-}
-.prepRail button {
-  justify-content: flex-start;
-  text-align: left;
-  font-size: 12px;
-}
-.prepRail span {
-  color: var(--muted);
-  font-size: 10px;
-}
-.prepStage {
-  min-width: 0;
-}
-.preview {
-  height: 480px;
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-}
-.materialEmpty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 34px 20px 18px;
-  gap: 12px;
-}
-.materialEmpty p {
-  font-size: 12px;
-  color: var(--muted);
-  max-width: 420px;
-  line-height: 1.8;
-}
-.paperIcon {
-  width: 74px;
-  height: 56px;
-  border: 1px solid #a9bca9;
-  box-shadow: 5px 5px 0 #e2eade;
-  border-radius: 4px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  font:
-    24px Georgia,
-    serif;
-  color: #59765b;
-}
-.paperIcon span {
-  color: #bb9664;
 }
 .spin {
   animation: spin 1s linear infinite;
@@ -585,12 +568,6 @@
   }
   .chat {
     display: none;
-  }
-  .prepDeck {
-    grid-template-columns: 110px minmax(0, 1fr);
-  }
-  .preview {
-    height: 380px;
   }
 }
 @media (max-width: 600px) {
@@ -635,6 +612,9 @@
   .canvas {
     height: 260px;
     flex: none;
+  }
+  .stageContent {
+    flex: none;
     margin: 10px;
   }
   .stageToolbar {
@@ -664,25 +644,6 @@
   .clock {
     font-size: 14px;
   }
-  .preparationPanel {
-    padding: 14px;
-  }
-  .sectionHeading {
-    flex-wrap: wrap;
-  }
-  .prepDeck {
-    display: block;
-  }
-  .prepRail {
-    flex-direction: row;
-    margin-bottom: 10px;
-  }
-  .prepRail button {
-    min-width: 110px;
-  }
-  .preview {
-    height: 340px;
-  }
   .chat {
     display: flex;
     height: 230px;
@@ -693,17 +654,413 @@
   }
 }
 
-.preparationPanel textarea {
-  width: 100%;
-  min-height: 80px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px;
-  margin-top: 6px;
-  font: inherit;
+/* Focused classroom shell; independent of preparation layout. */
+.classroom {
+  background: #f6f5ef;
+  --paper: #fffefa;
+  --line: #dfe4da;
+  --accent: #355e4d;
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+.topbar {
+  height: 76px;
+  background: #fffefa;
+  gap: 17px;
+}
+.topbar h1 {
+  font-family: 'Noto Serif SC', 'SimSun', serif;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+}
+.topbar p {
+  font-size: 11px;
+}
+.status {
+  background: #e4eee0;
+  color: #355e4d;
+}
+.clock {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font:
+    500 13px 'Noto Sans SC',
+    'Microsoft YaHei',
+    sans-serif;
+}
+.clock small {
+  font-size: 11px;
+  color: #728077;
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+}
+.body {
+  grid-template-columns: 150px minmax(0, 1fr) 300px;
+  gap: 0;
+}
+.rail {
+  padding: 15px 10px;
+  background: #fffefa;
+}
+.rail button {
+  border-radius: 7px;
+  padding: 7px;
+  font-size: 11px;
+}
+.railLabel {
+  font-size: 10px;
+  line-height: 1.6;
+}
+.canvas {
+  border-radius: 9px;
+  box-shadow: none;
   background: white;
 }
-.outline li {
+.stageToolbar {
+  padding: 12px 14px 0;
+}
+.classroom .student {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 3px 11px;
+  align-items: center;
+  text-align: left;
+  padding: 12px;
+  min-width: 145px;
+  max-width: 250px;
+  border-radius: 8px;
+}
+.studentAvatar {
+  grid-row: 1/3;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 19px;
+  line-height: 1;
+}
+.student strong {
+  font-size: 13px;
+  grid-column: 2;
+  overflow-wrap: anywhere;
+}
+.student small {
+  grid-column: 2;
+  font-size: 10px;
+}
+.classroom .student[data-hand='true'] {
+  border-color: #d4ae63;
+  background: #fff8e7;
+}
+.hand {
+  right: 6px;
+  top: 6px;
+  width: 15px;
+}
+.studentsTitle {
+  font-size: 10px;
+}
+.studentBubble {
+  font-size: 12px;
+  margin-bottom: 7px;
+  border-radius: 5px;
+  background: #fffefa;
+  max-height: 60px;
+}
+.students {
+  padding: 0 14px 12px;
+}
+.chat {
+  background: #fffefa;
+}
+.chatHeader {
+  padding: 17px;
+  font-size: 14px;
+}
+.chatHeader small {
+  font-size: 10px;
+  line-height: 1.7;
+}
+.chatHeader button {
+  font-size: 11px;
+  min-height: 28px;
+  padding: 3px 7px;
+  margin-top: 8px;
+}
+.messages {
+  padding: 14px;
+}
+.message {
+  font-size: 13px;
+}
+.message p {
+  line-height: 1.85;
+  padding: 11px;
+  border-radius: 8px;
+  border: 1px solid #e5e9df;
+}
+.controlEvent {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #849082;
+}
+.transcriptEmpty {
+  font-size: 12px;
+  color: #728077;
+  line-height: 1.9;
+}
+.footer {
+  padding: 11px 18px 13px;
+  background: #fffefa;
+}
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px 84px;
+  gap: 9px;
+  align-items: stretch;
+}
+.composer textarea {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  height: 60px;
+  min-height: 60px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+.composerActions {
+  display: contents;
+}
+.intentTabs {
+  grid-column: 1/-1;
+  grid-row: 1;
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  justify-self: start;
+}
+.intentTabs button {
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  font-size: 12px;
+  padding: 6px 14px;
+}
+.intentTabs button:last-child {
+  border: 0;
+}
+.intentTabs button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+}
+.composerActions > button {
+  grid-row: 2;
+  padding: 8px;
+}
+.composerActions > button:first-of-type {
+  grid-column: 2;
+}
+.composerActions > button:last-of-type {
+  grid-column: 3;
+}
+.footerActions {
+  margin-top: 10px;
+  gap: 9px;
+}
+.footerActions button {
+  font-size: 12px;
+  padding: 7px 11px;
+}
+.footerActions small {
+  font-size: 10px;
+}
+.footerActions .danger {
+  margin-left: 10px;
+  border-color: #e4b7ad;
+  color: #a55342;
+}
+.classroom button:disabled {
+  cursor: not-allowed;
+}
+.transcriptDialog {
+  --ink: #263e36;
+  --muted: #728077;
+  --accent: #355e4d;
+  --line: #dde3dc;
+  --paper: #fafbf8;
+  display: flex !important;
+  flex-direction: column;
+  max-width: 580px !important;
+  height: min(750px, 90dvh);
+  padding: 22px;
+  background: #fffefa;
+  color: #263e36;
+}
+.transcriptDialog .chat {
+  display: flex !important;
+  border: 0;
+  min-height: 0;
   flex: 1;
-  min-width: 200px;
+  height: auto;
+}
+.transcriptDialog .chatHeader {
+  padding: 10px 0;
+}
+.transcriptDialog .messages {
+  padding: 12px 0;
+}
+.transcriptDialog button {
+  font: inherit;
+  border: 1px solid #dde3dc;
+  border-radius: 6px;
+  background: #fffefa;
+  padding: 7px 10px;
+  color: #355e4d;
+  cursor: pointer;
+}
+.transcriptDialog .message p {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+@media (max-width: 1150px) {
+  .body {
+    grid-template-columns: 120px minmax(0, 1fr) 260px;
+  }
+  .topbar {
+    padding-inline: 13px;
+    gap: 10px;
+  }
+  .topbar h1 {
+    font-size: 18px;
+  }
+  .clock {
+    gap: 8px;
+  }
+  .clock small {
+    display: none;
+  }
+  .classroom .student {
+    min-width: 130px;
+    padding: 9px;
+    gap: 2px 7px;
+    grid-template-columns: 35px minmax(0, 1fr);
+  }
+  .studentAvatar {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+}
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: 105px minmax(0, 1fr);
+  }
+  .topbar h1 {
+    font-size: 17px;
+  }
+  .topbar button {
+    font-size: 11px;
+    padding: 7px 9px;
+  }
+  .clock {
+    font-size: 11px;
+  }
+  .classroom .student {
+    min-width: 130px;
+  }
+  .stageContent {
+    margin-inline: 11px;
+  }
+  .studentsTitle > span:last-child {
+    max-width: 60%;
+    text-align: right;
+  }
+}
+@media (max-width: 600px) {
+  .topbar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 12px;
+  }
+  .topbarTitle {
+    min-width: 160px;
+  }
+  .body {
+    display: flex;
+  }
+  .canvas {
+    height: 260px;
+  }
+  .footer {
+    padding: 12px;
+  }
+  .composer {
+    grid-template-columns: minmax(0, 1fr) 40px 70px;
+    gap: 7px;
+  }
+  .composer textarea {
+    flex-basis: auto;
+    height: 74px;
+  }
+  .intentTabs button {
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+  .footerActions .danger {
+    margin-left: auto;
+  }
+  .footerActions small {
+    flex-basis: 100%;
+  }
+  .rail {
+    height: 68px;
+  }
+  .rail button {
+    padding: 7px;
+  }
+  .students {
+    padding: 0 10px 12px;
+  }
+  .classroom .student {
+    min-width: 140px;
+  }
+  .transcriptDialog {
+    max-height: 87dvh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .classroom button {
+    transition: none;
+  }
+}
+.voiceCall {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid #c2d3c6;
+  border-radius: 8px;
+  background: #f0f6ef;
+  color: #284a3a;
+}
+.voiceCallHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 13px;
+}
+.voiceCallHeader button {
+  margin-inline-start: auto;
+}
+.voiceCall p {
+  max-height: 3em;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
 }

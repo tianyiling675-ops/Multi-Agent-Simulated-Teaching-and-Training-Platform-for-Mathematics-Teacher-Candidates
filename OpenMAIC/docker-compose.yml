@@ -45,6 +45,27 @@ services:
       - openmaic-data:/app/data
     restart: unless-stopped
 
+  teacher-voice:
+    build:
+      context: .
+      target: teacher-voice
+      args:
+        - ALPINE_MIRROR=${ALPINE_MIRROR:-}
+        - NPM_REGISTRY=${NPM_REGISTRY:-}
+    profiles:
+      - teacher-voice
+    env_file:
+      - .env.local
+    environment:
+      TEACHER_VOICE_APP_URL: http://openmaic:3000
+      TEACHER_VOICE_HOST: 0.0.0.0
+      TEACHER_VOICE_PORT: '9041'
+    ports:
+      - '127.0.0.1:9041:9041'
+    depends_on:
+      - openmaic
+    restart: unless-stopped
+
   # DOCX/PDF -> Markdown, with Word formulas explicitly deferred. The service
   # has no public port and no outbound network; uploads enter through Next.js.
   document-converter:

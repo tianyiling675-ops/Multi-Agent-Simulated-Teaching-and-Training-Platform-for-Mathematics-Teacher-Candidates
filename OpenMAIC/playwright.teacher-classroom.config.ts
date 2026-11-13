@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e/tests',
+  build: { external: ['**/scripts/teacher-voice-gateway.mjs'] },
   testMatch: ['**/teacher-classroom.spec.ts', '**/teacher-training*.spec.ts'],
   workers: 1,
   timeout: 240_000,

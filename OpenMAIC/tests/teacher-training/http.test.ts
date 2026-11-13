@@ -23,6 +23,53 @@ function send(path: string, body?: unknown, cookie?: string, headers: Record<str
 }
 
 describe('training HTTP boundary', () => {
+  it('routes overview and private class drafts through the same owner boundary', async () => {
+    const boot = await send('capabilities');
+    const cookie = boot.headers.get('set-cookie')!.split(';')[0];
+    const project = (
+      await (
+        await send(
+          'projects',
+          { title: '班级草稿', grade: '高二', scope: '配置', clientRequestId: randomUUID() },
+          cookie,
+        )
+      ).json()
+    ).data;
+    const path = `projects/${project.id}/class-draft`;
+    const body = {
+      expectedRevision: 0,
+      template: 'mixed',
+      plannedMinutes: 15,
+      materialVersionId: null,
+      students: [
+        {
+          id: 'lin',
+          name: '小林',
+          expression: 'responsive',
+          priorKnowledge: '',
+          misconceptions: ['配置私有内容'],
+        },
+      ],
+    };
+    const response = await handleTrainingRequest(
+      new Request(url + path, {
+        method: 'PATCH',
+        headers: { cookie, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+      path.split('/'),
+      async () => store,
+    );
+    expect(response.status).toBe(200);
+    expect(
+      (await (await send(path, undefined, cookie)).json()).data.students[0].misconceptions,
+    ).toEqual(['配置私有内容']);
+    expect((await send(path)).status).toBe(404);
+    const overview = await send('overview', undefined, cookie);
+    expect(overview.headers.get('cache-control')).toBe('no-store');
+    expect(JSON.stringify(await overview.json())).not.toContain('配置私有内容');
+  });
+
   it('issues a private device credential, persists on retry, and rejects another device', async () => {
     const boot = await send('capabilities');
     const setCookie = boot.headers.get('set-cookie')!;

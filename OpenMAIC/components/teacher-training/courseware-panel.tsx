@@ -16,11 +16,16 @@ import type { MaterialContent, PreparationDraft } from '@/lib/teacher-training/c
 import type { PreparationJob } from '@/lib/teacher-training/preparation-service';
 import { blankSlide } from '@/lib/teacher-training/slides';
 import { trainingApi } from '@/lib/teacher-training/client';
-import { SettingsDialog } from '@/components/settings';
-import { TrainingSlide, TrainingSlideEditor } from './slide-surface';
-import styles from './classroom.module.css';
-import { DocumentImporter } from './document-importer';
-import { applyDocumentImport, fileDataUrl } from '@/lib/teacher-training/document-import';
+import { TrainingSettings } from './settings-panel';
+import { TrainingSlide } from './slide-surface';
+import dynamic from 'next/dynamic';
+import styles from './preparation.module.css';
+import { fileDataUrl } from '@/lib/teacher-training/document-import';
+
+const TrainingSlideEditor = dynamic(
+  () => import('./slide-editor').then((m) => m.TrainingSlideEditor),
+  { ssr: false, loading: () => <p role="status">正在打开课件编辑器…</p> },
+);
 
 export function CoursewarePanel({
   projectId,
@@ -33,6 +38,8 @@ export function CoursewarePanel({
   onBusyChange,
   onOutlineDirtyChange,
   draftDirty,
+  selectedPageId,
+  onSelectPage,
 }: {
   projectId: string;
   content: MaterialContent;
@@ -44,8 +51,14 @@ export function CoursewarePanel({
   onBusyChange: (busy: boolean) => void;
   onOutlineDirtyChange: (dirty: boolean) => void;
   draftDirty: boolean;
+  selectedPageId?: string;
+  onSelectPage?: (id: string) => void;
 }) {
   const [selected, setSelected] = useState('');
+  const selectPage = (id: string) => {
+    setSelected(id);
+    onSelectPage?.(id);
+  };
   const [editing, setEditing] = useState(false);
   const [outlineEdits, setOutlineEdits] = useState<
     Record<string, { title: string; description: string }>
@@ -69,7 +82,7 @@ export function CoursewarePanel({
     [],
   );
   const pages = content.pages ?? [];
-  const page = pages.find((p) => p.id === selected) ?? pages[0];
+  const page = pages.find((p) => p.id === (selectedPageId ?? selected)) ?? pages[0];
   const latestJob = job ?? jobs.at(-1);
   const locked = disabled || !!working;
   const busy = (label: string) => {
@@ -137,7 +150,7 @@ export function CoursewarePanel({
             },
           ],
         });
-        setSelected(imported[0]?.id ?? '');
+        selectPage(imported[0]?.id ?? '');
         setEditing(false);
         setNotice(
           `已导入${imported.length}/${count}页。请预览核对公式、图片和版式，再保存确认。原PPT动画不作为本轮授课脚本。`,
@@ -208,7 +221,7 @@ export function CoursewarePanel({
         currentJob = result.job;
         setJob(currentJob);
         onSaved(result.draft);
-        setSelected(outline.id);
+        selectPage(outline.id);
         setEditing(false);
       }
       setNotice(
@@ -242,9 +255,7 @@ export function CoursewarePanel({
     <section className={styles.preparationPanel} aria-label="课件准备">
       <div className={styles.sectionHeading}>
         <div>
-          <span className={styles.eyebrow}>COURSE MATERIAL</span>
-          <h2>准备你的课堂</h2>
-          <p>从课题生成，或导入已有课件。PPTX 保留页面；PDF／Word 提取参考文字。</p>
+          <h2>课件准备</h2>
         </div>
         <button type="button" onClick={() => setSettings(true)}>
           <Settings size={16} />
@@ -252,12 +263,7 @@ export function CoursewarePanel({
         </button>
       </div>
       <div className={styles.toolrow}>
-        <button
-          type="button"
-          className={styles.primary}
-          disabled={locked}
-          onClick={() => void generate()}
-        >
+        <button type="button" disabled={locked} onClick={() => void generate()}>
           <Sparkles size={16} />
           从课题生成课件
         </button>
@@ -265,15 +271,6 @@ export function CoursewarePanel({
           <Upload size={16} />
           导入PPTX课件
         </button>
-        <DocumentImporter
-          purpose="reference"
-          disabled={locked}
-          onBusyChange={onBusyChange}
-          onApply={(document, edited) => {
-            onChange(applyDocumentImport(content, document, edited, 'reference'));
-            setNotice('参考文档已加入草稿，保存后可持久保留并用于备课。');
-          }}
-        />
         <button
           type="button"
           disabled={locked || pages.length >= 80}
@@ -291,7 +288,7 @@ export function CoursewarePanel({
                 },
               ],
             });
-            setSelected(id);
+            selectPage(id);
             setEditing(true);
           }}
         >
@@ -390,12 +387,16 @@ export function CoursewarePanel({
                 aria-pressed={page.id === p.id}
                 disabled={locked}
                 onClick={() => {
-                  setSelected(p.id);
+                  selectPage(p.id);
                   setEditing(false);
                 }}
               >
-                <span>{String(i + 1).padStart(2, '0')}</span>
-                {p.title}
+                <span>
+                  {String(i + 1).padStart(2, '0')} · {p.title}
+                </span>
+                <div className={styles.prepThumbnail} aria-hidden="true">
+                  <TrainingSlide slide={p.canvas} />
+                </div>
               </button>
             ))}
           </nav>
@@ -464,7 +465,7 @@ export function CoursewarePanel({
           <p>生成可编辑课件，或保留PPTX页面导入。只有教案时，也可以直接使用白板试讲。</p>
         </div>
       )}
-      <SettingsDialog open={settings} onOpenChange={setSettings} />
+      <TrainingSettings open={settings} onOpenChange={setSettings} />
     </section>
   );
 }

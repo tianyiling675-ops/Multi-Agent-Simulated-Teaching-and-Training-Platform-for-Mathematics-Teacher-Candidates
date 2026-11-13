@@ -35,8 +35,9 @@ test('real DOCX preview, formula deferral, cancel, apply, source archive and his
   page.on('pageerror', (e) => errors.push(e.message));
   const id = await createProject(page);
   await page.getByRole('textbox', { name: '教学目标', exact: true }).fill('已有目标保持');
-  const process = page.getByRole('textbox', { name: '教学过程', exact: true });
+  const process = page.getByLabel('教学过程', { exact: true });
   await process.fill('已有讲解。');
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await page.getByRole('button', { name: '导入教案', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: '导入教案', exact: true });
   await dialog.getByLabel('教案文件').setInputFiles(resolve(fixtures, '数学教案.docx'));
@@ -57,6 +58,7 @@ test('real DOCX preview, formula deferral, cancel, apply, source archive and his
   await page.screenshot({ path: 'test-results/teacher-document-preview-desktop.png' });
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
   await expect(process).toHaveValue('已有讲解。');
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await page.getByRole('button', { name: '导入教案', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '导入教案', exact: true });
   await dialog.getByLabel('教案文件').setInputFiles(resolve(fixtures, '数学教案.docx'));
@@ -79,8 +81,10 @@ test('real DOCX preview, formula deferral, cancel, apply, source archive and his
   expect(detail.draft.content.sources[0].originalText).not.toContain('已核对的补充讲解');
   await page.reload();
   await expect(process).toHaveValue(/已核对的补充讲解。/);
-  await page.getByRole('button', { name: '确认本轮材料' }).click();
+  await page.getByRole('button', { name: '确认试讲版本并继续' }).click();
   await expect(page.getByRole('status').filter({ hasText: '材料版本 V1 已确认' })).toBeVisible();
+  await page.getByRole('button', { name: '01 材料准备' }).click();
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await page.getByRole('button', { name: '导入教案', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '导入教案', exact: true });
   await dialog.getByLabel('教案文件').setInputFiles(resolve(fixtures, '数学教案.docx'));
@@ -94,7 +98,7 @@ test('real DOCX preview, formula deferral, cancel, apply, source archive and his
   await page.screenshot({ path: 'test-results/teacher-document-preview-mobile.png' });
   await dialog.getByRole('button', { name: '应用到草稿' }).click();
   await expect(process).toHaveValue('明确替换后的讲解。');
-  await page.getByRole('button', { name: '确认本轮材料' }).click();
+  await page.getByRole('button', { name: '确认试讲版本并继续' }).click();
   await expect(page.getByRole('status').filter({ hasText: '材料版本 V2 已确认' })).toBeVisible();
   const versions = (await (await page.request.get('/api/teacher-training/projects/' + id)).json())
     .data.materials;
@@ -102,6 +106,8 @@ test('real DOCX preview, formula deferral, cancel, apply, source archive and his
     '已核对的补充讲解',
   );
   expect(versions.find((v: { number: number }) => v.number === 2).content.sources).toHaveLength(1);
+  await page.getByRole('button', { name: '01 材料准备' }).click();
+  await page.getByRole('button', { name: '参考材料', exact: true }).click();
   const sources = page.getByRole('region', { name: '原始来源', exact: true });
   await sources.locator('summary').click();
   await expect(sources).toContainText('尚未执行公式转换');
@@ -122,6 +128,7 @@ test('real DOCX preview, formula deferral, cancel, apply, source archive and his
   page.once('dialog', (dialog) => dialog.accept());
   await sources.getByRole('button', { name: '从草稿移除来源' }).click();
   await expect(sources).not.toBeVisible();
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await expect(process).toHaveValue('明确替换后的讲解。');
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: '草稿已保存' })).toBeVisible();
@@ -140,8 +147,9 @@ test('real PDF reference, OCR and damaged-file errors, long text and cancelled r
   page,
 }) => {
   const id = await createProject(page);
-  const process = page.getByRole('textbox', { name: '教学过程', exact: true });
+  const process = page.getByLabel('教学过程', { exact: true });
   await process.fill('保留已有教案。');
+  await page.getByRole('button', { name: '参考材料', exact: true }).click();
   await page.getByRole('button', { name: '导入参考文档', exact: true }).click();
   let dialog = page.getByRole('dialog', { name: '导入参考文档', exact: true });
   await dialog.getByLabel('参考文档文件').setInputFiles(resolve(fixtures, '参考材料.pdf'));
@@ -150,6 +158,7 @@ test('real PDF reference, OCR and damaged-file errors, long text and cancelled r
     { timeout: 90_000 },
   );
   await dialog.getByRole('button', { name: '加入参考材料' }).click();
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await expect(process).toHaveValue('保留已有教案。');
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: '草稿已保存' })).toBeVisible();
@@ -157,8 +166,10 @@ test('real PDF reference, OCR and damaged-file errors, long text and cancelled r
     .draft.content;
   expect(saved.sources[0].purpose).toBe('reference');
   expect(saved.sources[0].conversion.pages).toBe(2);
-  await page.getByRole('button', { name: '确认本轮材料', exact: true }).click();
+  await page.getByRole('button', { name: '确认试讲版本并继续', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: '材料版本 V1 已确认' })).toBeVisible();
+  await page.getByRole('button', { name: '01 材料准备' }).click();
+  await page.getByRole('button', { name: '参考材料', exact: true }).click();
   const sources = page.getByRole('region', { name: '原始来源', exact: true });
   await sources.locator('summary').click();
   await sources.getByRole('button', { name: '查看来源内容', exact: true }).click();
@@ -169,9 +180,11 @@ test('real PDF reference, OCR and damaged-file errors, long text and cancelled r
   await archived.getByRole('button', { name: '关闭', exact: true }).click();
   await expect(archived).toBeVisible();
   await archived.getByRole('button', { name: '应用参考修改', exact: true }).click();
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await expect(process).toHaveValue('保留已有教案。');
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: '草稿已保存' })).toBeVisible();
+  await page.getByRole('button', { name: '参考材料', exact: true }).click();
   await page.reload();
   await page.getByRole('region', { name: '原始来源', exact: true }).locator('summary').click();
   await page.getByRole('button', { name: '查看来源内容', exact: true }).click();
@@ -211,6 +224,7 @@ test('real PDF reference, OCR and damaged-file errors, long text and cancelled r
     refreshed.materials.find((v: { number: number }) => v.number === 1).content.sources[0]
       .referenceText,
   ).toBeUndefined();
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await page.getByRole('button', { name: '导入教案', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '导入教案', exact: true });
   await dialog.getByLabel('教案文件').setInputFiles(resolve(fixtures, '扫描件.pdf'));
@@ -235,6 +249,7 @@ test('real PDF reference, OCR and damaged-file errors, long text and cancelled r
     await held;
     await route.fulfill({ status: 503, json: { message: '受控取消请求' } }).catch(() => {});
   });
+  await page.getByRole('button', { name: '教学设计', exact: true }).click();
   await page.getByRole('button', { name: '导入教案', exact: true }).click();
   dialog = page.getByRole('dialog', { name: '导入教案', exact: true });
   await dialog.getByLabel('教案文件').setInputFiles(resolve(fixtures, '参考材料.pdf'));

@@ -3,6 +3,10 @@ import type { NextConfig } from 'next';
 const isVercelBuild = Boolean(process.env.VERCEL);
 
 const nextConfig: NextConfig = {
+  // Allow only the explicitly selected temporary test host to load dev assets.
+  allowedDevOrigins: process.env.TEACHER_TRAINING_TEST_HOST
+    ? [process.env.TEACHER_TRAINING_TEST_HOST]
+    : undefined,
   // Keep isolated browser acceptance builds away from the user's dev server.
   distDir: process.env.TEACHER_TRAINING_TEST_DIST || '.next',
   output: process.env.VERCEL ? undefined : 'standalone',

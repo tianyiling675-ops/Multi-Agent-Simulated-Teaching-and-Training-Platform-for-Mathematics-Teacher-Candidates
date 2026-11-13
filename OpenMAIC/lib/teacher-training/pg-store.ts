@@ -1,6 +1,7 @@
 import { emptyState, type TrainingState } from './contracts';
 import type { TrainingStore } from './store';
 import { encodeRecords, decodeRecords, isRecordStorage, recordHeader } from './record-storage';
+import { emptyFaceEvidence, type FaceEvidence } from './face-evidence';
 
 export interface TrainingQueryable {
   query(
@@ -21,6 +22,9 @@ export async function ensureTrainingSchema(db: TrainingQueryable) {
   await db.query(
     `CREATE TABLE IF NOT EXISTS teacher_training_records (owner_id TEXT NOT NULL, kind TEXT NOT NULL, record_id TEXT NOT NULL, body JSONB NOT NULL, PRIMARY KEY(owner_id,kind,record_id))`,
   );
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS teacher_training_face_evidence (owner_id TEXT NOT NULL, session_id TEXT NOT NULL, body JSONB NOT NULL, PRIMARY KEY(owner_id,session_id))`,
+  );
 }
 
 /** Record writes and migrations share the existing per-owner transaction lock. */
@@ -29,6 +33,35 @@ export class PgTrainingStore implements TrainingStore {
     private db: TrainingQueryable,
     private transaction: TrainingTransaction,
   ) {}
+  async readFaceEvidence(ownerId: string, sessionId: string): Promise<FaceEvidence> {
+    const result = await this.db.query(
+      'SELECT body FROM teacher_training_face_evidence WHERE owner_id=$1 AND session_id=$2',
+      [ownerId, sessionId],
+    );
+    return (result.rows[0]?.body as FaceEvidence | undefined) ?? emptyFaceEvidence();
+  }
+  async updateFaceEvidence(
+    ownerId: string,
+    sessionId: string,
+    mutation: (evidence: FaceEvidence) => FaceEvidence,
+  ) {
+    return this.transaction(async (db) => {
+      await db.query(
+        'INSERT INTO teacher_training_face_evidence(owner_id,session_id,body) VALUES ($1,$2,$3::jsonb) ON CONFLICT(owner_id,session_id) DO NOTHING',
+        [ownerId, sessionId, JSON.stringify(emptyFaceEvidence())],
+      );
+      const result = await db.query(
+        'SELECT body FROM teacher_training_face_evidence WHERE owner_id=$1 AND session_id=$2 FOR UPDATE',
+        [ownerId, sessionId],
+      );
+      const next = mutation(result.rows[0].body as FaceEvidence);
+      await db.query(
+        'UPDATE teacher_training_face_evidence SET body=$3::jsonb WHERE owner_id=$1 AND session_id=$2',
+        [ownerId, sessionId, JSON.stringify(next)],
+      );
+      return next;
+    });
+  }
   private async snapshot(db: TrainingQueryable, ownerId: string) {
     const result = await db.query(
       'SELECT o.body AS owner_body, r.kind, r.record_id, r.body FROM teacher_training_owners o LEFT JOIN teacher_training_records r ON r.owner_id=o.owner_id WHERE o.owner_id=$1',

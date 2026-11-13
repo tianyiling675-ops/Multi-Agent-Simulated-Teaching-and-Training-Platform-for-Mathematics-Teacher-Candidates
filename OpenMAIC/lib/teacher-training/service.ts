@@ -1,12 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   classSchema,
+  classDraftSchema,
   commandSchema,
   confirmSchema,
   draftSchema,
   emptyMaterial,
   eventSchema,
   projectSchema,
+  rehearsalSchema,
   sessionSchema,
   serializeMaterial,
   TrainingError,
@@ -18,10 +20,13 @@ import {
   type TrainingState,
   type MaterialVersion,
   type MaterialContent,
+  type ClassConfigDraft,
 } from './contracts';
+import { projectOverview } from './overview';
 import type { TrainingStore } from './store';
 import { emptyClassroom, publicClassroom } from './classroom-contracts';
 import { cleanMaterial, cleanSlide } from './materials';
+import { evidenceScene, reviewEvidence } from './review-model';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 // PostgreSQL JSONB reorders object keys. Content equality must not depend on
@@ -107,8 +112,77 @@ export function cancelStudentTurns(state: TrainingState, session: TrainingSessio
   session.speakerEpoch++;
   run.activeStudentId = null;
   run.hands = [];
+  delete run.voiceCall;
   for (const turn of Object.values(run.turns)) {
     if (turn.status === 'generating' || turn.status === 'proposed') turn.status = 'cancelled';
+  }
+}
+
+function insertSession(
+  state: TrainingState,
+  binding: Pick<
+    TrainingSession,
+    'projectId' | 'materialVersionId' | 'classConfigVersionId' | 'trainingConfig' | 'rehearsal'
+  >,
+) {
+  const session: TrainingSession = {
+    ...binding,
+    id: newId('training'),
+    rubricVersionId: null,
+    scoreStatus: 'pending_standard',
+    totalScore: null,
+    status: 'ready',
+    revision: 0,
+    seq: 0,
+    speakerEpoch: 0,
+    createdAt: now(),
+    schemaVersion: 1,
+  };
+  state.sessions[session.id] = session;
+  state.events[session.id] = [];
+  classroomRun(state, session.id);
+  return session;
+}
+
+function startSessionScene(state: TrainingState, session: TrainingSession, clientEventId: string) {
+  const run = classroomRun(state, session.id);
+  const material = find(state.materials, session.materialVersionId);
+  const rehearsal = session.rehearsal;
+  const scene = rehearsal
+    ? evidenceScene(
+        { material, events: find(state.events, rehearsal.sourceSessionId) },
+        rehearsal.cutoff,
+      )
+    : null;
+  const page = scene ? scene.page : material.content.pages?.[0];
+  if (page) {
+    run.pageId = page.id;
+    appendEvent(state, session, `${clientEventId}-page`, 'page_exposure', { pageId: page.id });
+  }
+  if (scene) {
+    run.board.elements = scene.board.elements;
+    run.boardOpen = scene.boardOpen;
+    if (scene.boardOpen)
+      appendEvent(state, session, `${clientEventId}-board`, 'board_visibility', { open: true });
+    scene.board.elements.forEach((element, index) => {
+      appendEvent(state, session, `${clientEventId}-board-${index}`, 'board_operation', {
+        operation: { kind: 'add', element },
+      });
+    });
+  }
+  if (rehearsal?.kind === 'response') {
+    appendEvent(
+      state,
+      session,
+      `${clientEventId}-answer`,
+      'student_speech',
+      {
+        studentId: rehearsal.studentId,
+        text: rehearsal.prompt,
+        rehearsalSeed: true,
+      },
+      'student',
+    );
   }
 }
 
@@ -117,6 +191,56 @@ export class TrainingService {
     private store: TrainingStore,
     private ownerId: string,
   ) {}
+
+  async getOverview() {
+    return projectOverview(await this.store.read(this.ownerId));
+  }
+
+  async getClassDraft(projectId: string) {
+    const state = await this.store.read(this.ownerId);
+    find(state.projects, projectId);
+    return state.classDrafts?.[projectId] ?? null;
+  }
+
+  async saveClassDraft(projectId: string, input: unknown) {
+    const body = classDraftSchema.parse(input);
+    return this.store.update(this.ownerId, (state) => {
+      find(state.projects, projectId);
+      const previous = state.classDrafts?.[projectId];
+      expectRevision(previous?.revision ?? 0, body.expectedRevision);
+      if (
+        body.materialVersionId &&
+        find(state.materials, body.materialVersionId).projectId !== projectId
+      )
+        throw new TrainingError('VERSION_SCOPE_MISMATCH', '材料不属于当前课题。', 409);
+      const { expectedRevision, ...content } = body;
+      const studentValues = (students: ClassConfigDraft['students']) =>
+        students.map((student) => [
+          student.id,
+          student.name,
+          student.priorKnowledge,
+          student.expression,
+          student.misconceptions,
+        ]);
+      if (
+        previous &&
+        previous.template === content.template &&
+        previous.plannedMinutes === content.plannedMinutes &&
+        previous.materialVersionId === content.materialVersionId &&
+        JSON.stringify(studentValues(previous.students)) ===
+          JSON.stringify(studentValues(content.students))
+      )
+        return previous;
+      const draft: ClassConfigDraft = {
+        id: projectId,
+        projectId,
+        revision: expectedRevision + 1,
+        ...content,
+      };
+      (state.classDrafts ??= {})[projectId] = draft;
+      return draft;
+    });
+  }
 
   async listProjects() {
     const state = await this.store.read(this.ownerId);
@@ -260,8 +384,7 @@ export class TrainingService {
           : hash(material.content);
         if (material.contentHash !== actualHash)
           throw new TrainingError('MATERIAL_CORRUPTED', '材料版本校验失败，请检查存储。', 409);
-        const session: TrainingSession = {
-          id: newId('training'),
+        return insertSession(state, {
           projectId: body.projectId,
           materialVersionId: material.id,
           classConfigVersionId: config.id,
@@ -271,20 +394,49 @@ export class TrainingService {
             scope: body.scope,
             plannedMinutes: body.plannedMinutes,
           },
-          rubricVersionId: null,
-          scoreStatus: 'pending_standard',
-          totalScore: null,
-          status: 'ready',
-          revision: 0,
-          seq: 0,
-          speakerEpoch: 0,
-          createdAt: now(),
-          schemaVersion: 1,
-        };
-        state.sessions[session.id] = session;
-        state.events[session.id] = [];
-        classroomRun(state, session.id);
-        return session;
+        });
+      }),
+    );
+  }
+
+  async createRehearsal(sourceSessionId: string, input: unknown) {
+    const body = rehearsalSchema.parse(input);
+    return this.store.update(this.ownerId, (state) =>
+      once(state, `rehearsal:${sourceSessionId}:${body.clientRequestId}`, body, () => {
+        const source = find(state.sessions, sourceSessionId);
+        if (source.status !== 'ended')
+          throw new TrainingError('SESSION_STATE_CONFLICT', '请结束原轮次后再开始片段重练。', 409);
+        const events = find(state.events, sourceSessionId);
+        const anchor = reviewEvidence({ session: source, events }).find(
+          (row) => row.id === body.anchorEventId,
+        );
+        const kind =
+          anchor?.type === 'student_speech' && anchor.studentId && !anchor.rehearsalSeed
+            ? 'response'
+            : anchor?.type === 'teacher_text' &&
+                (anchor.intent === 'question' || anchor.intent === 'check')
+              ? 'waiting'
+              : null;
+        if (!anchor?.text || !kind)
+          throw new TrainingError(
+            'REHEARSAL_ANCHOR_INVALID',
+            '请从已保存的提问或学生回答发起重练。',
+            400,
+          );
+        return insertSession(state, {
+          projectId: source.projectId,
+          materialVersionId: source.materialVersionId,
+          classConfigVersionId: source.classConfigVersionId,
+          trainingConfig: { ...source.trainingConfig, scope: 'segment', plannedMinutes: 5 },
+          rehearsal: {
+            sourceSessionId,
+            anchorEventId: anchor.id,
+            cutoff: anchor.lastSeq,
+            kind,
+            prompt: anchor.text,
+            ...(anchor.studentId ? { studentId: anchor.studentId } : {}),
+          },
+        });
       }),
     );
   }
@@ -340,8 +492,8 @@ export class TrainingService {
         ) {
           throw new TrainingError('STUDENT_NOT_FOUND', '点名对象不属于本轮班级。');
         }
-        if (body.command !== 'call_on' && body.studentId !== undefined)
-          throw new TrainingError('INVALID_REQUEST', '此操作不接受学生标识。');
+        if (body.command !== 'call_on' && (body.studentId !== undefined || body.voice))
+          throw new TrainingError('INVALID_REQUEST', '此操作不接受点名参数。');
         if (body.command === 'start' || body.command === 'resume') session.status = 'running';
         if (body.command === 'pause' || body.command === 'recover') session.status = 'paused';
         if (body.command === 'end') {
@@ -356,15 +508,8 @@ export class TrainingService {
           to: session.status,
           ...(body.studentId ? { studentId: body.studentId } : {}),
         });
-        if (body.command === 'start') {
-          const firstPage = find(state.materials, session.materialVersionId).content.pages?.[0];
-          if (firstPage) {
-            run.pageId = firstPage.id;
-            appendEvent(state, session, `${body.clientEventId}-page`, 'page_exposure', {
-              pageId: firstPage.id,
-            });
-          }
-        }
+        if (body.voice) run.voiceCall = { triggerId: event.id };
+        if (body.command === 'start') startSessionScene(state, session, body.clientEventId);
         return { session, event, accepted: true };
       });
       return { ...result, duplicate };

@@ -13,6 +13,10 @@ import {
   type TrainingQueryable,
 } from '@/lib/teacher-training/pg-store';
 import type { TrainingStore } from '@/lib/teacher-training/store';
+import { ClassroomService } from '@/lib/teacher-training/classroom-service';
+import { FaceEvidenceService } from '@/lib/teacher-training/face-evidence-service';
+import { faceModelVersion } from '@/lib/teacher-training/face-evidence';
+import { compareRehearsal } from '@/lib/teacher-training/rehearsal-review';
 
 const key = () => randomUUID();
 async function fixture(store: TrainingStore, owner = key()) {
@@ -78,6 +82,150 @@ for (const backend of ['sqlite', 'postgres-contract'] as const) {
     });
     afterAll(async () => {
       await close();
+    });
+
+    it('stores private face evidence independently of a pending call-on and invalidates old uploads after deletion', async () => {
+      const f = await fixture(store);
+      const { id } = f.session;
+      const evidence = new FaceEvidenceService(store, f.owner);
+      const started = await f.service.command(id, {
+        command: 'start',
+        expectedRevision: 0,
+        clientEventId: key(),
+      });
+      const called = await f.service.command(id, {
+        command: 'call_on',
+        studentId: 'lin',
+        expectedRevision: started.session.revision,
+        clientEventId: key(),
+      });
+      const at = Date.parse(started.event.receivedAt);
+      const window = {
+        id: key(),
+        startedAt: at,
+        endedAt: at,
+        samples: 4,
+        visible: 4,
+        smile: 3,
+        browDown: 0,
+        browUp: 0,
+      };
+      const body = { generation: 0, modelVersion: faceModelVersion, windows: [window] };
+      await evidence.append(id, body);
+      await evidence.append(id, body);
+      expect((await evidence.read(id)).windows).toEqual([window]);
+      const runtime = await f.service.getRuntime(id);
+      expect(runtime.session.revision).toBe(called.session.revision);
+      expect(runtime.session.seq).toBe(called.event.seq);
+      expect(runtime).not.toHaveProperty('windows');
+      const turn = await new ClassroomService(store, f.owner).react(
+        id,
+        { triggerId: called.event.id, clientRequestId: key() },
+        async () => ({ hands: [], speech: '我认为长轴在横向。', changes: [] }),
+      );
+      expect(turn.speech).toContain('横向');
+      await expect(new FaceEvidenceService(store, key()).read(id)).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+      await evidence.clear(id);
+      await expect(evidence.append(id, body)).rejects.toMatchObject({
+        code: 'FACE_EVIDENCE_RESET',
+      });
+      expect((await evidence.read(id)).windows).toEqual([]);
+    });
+
+    it('starts a response rehearsal with the same frozen scenario and compares the new teacher reply', async () => {
+      const f = await fixture(store);
+      const id = f.session.id;
+      const command = async (sessionId: string, body: object) => {
+        const { session } = await f.service.getRuntime(sessionId);
+        return f.service.command(sessionId, {
+          ...body,
+          expectedRevision: session.revision,
+          clientEventId: key(),
+        });
+      };
+      await command(id, { command: 'start' });
+      const called = await command(id, { command: 'call_on', studentId: 'lin' });
+      const classroom = new ClassroomService(store, f.owner);
+      const turn = await classroom.react(
+        id,
+        { triggerId: called.event.id, clientRequestId: key() },
+        async () => ({ hands: [], speech: '长轴总是在横向。', changes: [] }),
+      );
+      const answer = await classroom.deliver(id, {
+        turnId: turn.id,
+        speakerEpoch: turn.speakerEpoch,
+        length: turn.speech.length,
+        clientEventId: key(),
+      });
+      const reply = async (sessionId: string, text: string) => {
+        const { session } = await f.service.getRuntime(sessionId);
+        return f.service.submitEvent(sessionId, {
+          type: 'teacher_text',
+          text,
+          expectedRevision: session.revision,
+          clientEventId: key(),
+        });
+      };
+      await reply(id, '这个结论需要改一改。');
+      await command(id, { command: 'end', confirmed: true });
+      const request = { anchorEventId: answer.event.id, clientRequestId: key() };
+      const rehearsal = await f.service.createRehearsal(id, request);
+      expect((await f.service.createRehearsal(id, request)).id).toBe(rehearsal.id);
+      expect(rehearsal.materialVersionId).toBe(f.session.materialVersionId);
+      expect(rehearsal.classConfigVersionId).toBe(f.session.classConfigVersionId);
+      expect(rehearsal.trainingConfig.scope).toBe('segment');
+      await command(rehearsal.id, { command: 'start' });
+      const runtime = await f.service.getRuntime(rehearsal.id);
+      expect(runtime.events.at(-1)?.payload).toMatchObject({
+        text: '长轴总是在横向。',
+        rehearsalSeed: true,
+        studentId: 'lin',
+      });
+      await reply(rehearsal.id, '你能比较分母里的两个数吗？');
+      const comparison = await compareRehearsal(store, f.owner, rehearsal.id);
+      expect(comparison.original?.after).toBe('这个结论需要改一改。');
+      expect(comparison.current?.after).toBe('你能比较分母里的两个数吗？');
+      expect(comparison.current?.observation).toBeUndefined();
+      await expect(compareRehearsal(store, key(), rehearsal.id)).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('persists editable class setup separately from frozen classroom state', async () => {
+      const f = await fixture(store);
+      const data = {
+        expectedRevision: 0,
+        template: 'support',
+        plannedMinutes: 20,
+        materialVersionId: f.material.id,
+        students: [
+          {
+            id: 'new_student',
+            name: '新学生',
+            priorKnowledge: '需要支持',
+            expression: 'reserved',
+            misconceptions: ['草稿私有误解'],
+          },
+        ],
+      };
+      const draft = await f.service.saveClassDraft(f.project.id, data);
+      expect(await new TrainingService(store, f.owner).getClassDraft(f.project.id)).toEqual(draft);
+      expect(
+        (
+          await f.service.saveClassDraft(f.project.id, {
+            ...data,
+            expectedRevision: draft.revision,
+          })
+        ).revision,
+      ).toBe(draft.revision);
+      expect(JSON.stringify(await f.service.getSession(f.session.id))).not.toContain(
+        '草稿私有误解',
+      );
+      expect((await f.service.getOverview()).projects.some((p) => p.id === f.project.id)).toBe(
+        true,
+      );
     });
 
     it('freezes content and original sources; draft edits cannot change historical evidence', async () => {

@@ -45,6 +45,16 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     fi && \
     pnpm install --frozen-lockfile --ignore-scripts
 
+FROM deps AS teacher-voice-deps
+RUN mkdir -p /voice/node_modules && cp -RL node_modules/ws /voice/node_modules/ws
+
+FROM node:22-alpine AS teacher-voice
+WORKDIR /voice
+COPY --from=teacher-voice-deps /voice/node_modules ./node_modules
+COPY scripts/teacher-voice-gateway.mjs ./
+USER node
+CMD ["node", "teacher-voice-gateway.mjs"]
+
 # ---- Stage 3: Builder ----
 FROM base AS builder
 

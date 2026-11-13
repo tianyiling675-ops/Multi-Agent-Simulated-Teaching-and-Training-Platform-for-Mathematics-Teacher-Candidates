@@ -1,4 +1,5 @@
 import { emptyState, TrainingError, type TrainingState } from './contracts';
+import type { FaceEvidence } from './face-evidence';
 
 /** Mutators are synchronous and pure apart from modifying their supplied snapshot.
  * A backend must serialize a whole owner's mutation and commit it atomically.
@@ -7,6 +8,12 @@ import { emptyState, TrainingError, type TrainingState } from './contracts';
 export interface TrainingStore {
   read(ownerId: string): Promise<TrainingState>;
   update<T>(ownerId: string, mutation: (state: TrainingState) => T): Promise<T>;
+  readFaceEvidence(ownerId: string, sessionId: string): Promise<FaceEvidence>;
+  updateFaceEvidence(
+    ownerId: string,
+    sessionId: string,
+    mutation: (evidence: FaceEvidence) => FaceEvidence,
+  ): Promise<FaceEvidence>;
 }
 
 export function decodeState(value: unknown): TrainingState {

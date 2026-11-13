@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PRODUCT_NAME } from '@/lib/brand/brand-config';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
@@ -29,7 +30,7 @@ import { ProSwapWatcher } from '@/components/workbench/ProSwapWatcher';
 import '@fontsource-variable/inter';
 
 export const metadata: Metadata = {
-  title: '教师训练 · OpenMAIC',
+  title: PRODUCT_NAME,
   description: '数学教师的备课、试讲与课堂训练记录。',
 };
 

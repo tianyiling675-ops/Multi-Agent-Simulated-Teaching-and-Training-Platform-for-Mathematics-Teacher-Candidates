@@ -23,11 +23,14 @@ export interface BrandConfig {
   themeColor: string;
 }
 
+export const PRODUCT_NAME_LINES = ['多智能体课堂模拟', '与教学评测系统'] as const;
+export const PRODUCT_NAME = PRODUCT_NAME_LINES.join('');
+
 /** The default brand: the product itself, with no vendor overrides. */
 export const DEFAULT_BRAND: BrandConfig = {
-  productName: 'OpenMAIC',
-  shortName: 'OpenMAIC',
-  logoSrc: '/logo-horizontal.png',
+  productName: PRODUCT_NAME,
+  shortName: PRODUCT_NAME,
+  logoSrc: '/system-logo.svg',
   logoHasWordmark: true,
   markSrc: '/openmaic-mark.png',
   themeColor: '#722ed1',

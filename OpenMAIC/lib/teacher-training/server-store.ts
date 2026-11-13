@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import type { TrainingStore } from './store';
 import { TrainingError } from './contracts';
 
-const KEY = Symbol.for('openmaic.teacher-training.store.records-v2');
+const KEY = Symbol.for('openmaic.teacher-training.store.face-evidence-v1');
 const globalStores = globalThis as typeof globalThis & {
   [KEY]?: Map<string, Promise<TrainingStore>>;
 };

@@ -82,7 +82,7 @@ export function WorkspaceHome({
           plain button, not a second ProBadge: two elements answering to
           `pro-mode-exit` would be one testid too many. */}
       <div className="flex h-12 shrink-0 items-center justify-between px-4 md:hidden">
-        <img src={brand.logoSrc} alt={brand.productName} className="h-5 w-auto" />
+        <img src={brand.logoSrc} alt={brand.productName} className="h-10 w-auto" />
         <button
           type="button"
           data-testid="pro-workspace-exit-compact"

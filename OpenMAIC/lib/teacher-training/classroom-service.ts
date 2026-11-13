@@ -47,6 +47,8 @@ export class ClassroomService {
     const prepared = await this.store.update(this.ownerId, (state) => {
       const session = find(state.sessions, sessionId);
       const run = classroomRun(state, sessionId);
+      if (run.voiceCall)
+        throw new TrainingError('VOICE_CALL_ACTIVE', '请先收回实时通话的发言权。', 409);
       const previous = Object.values(run.turns).find((t) => t.requestId === body.clientRequestId);
       if (previous) {
         if (previous.triggerId !== body.triggerId)

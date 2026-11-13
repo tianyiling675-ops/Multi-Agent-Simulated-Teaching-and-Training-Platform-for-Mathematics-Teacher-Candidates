@@ -128,12 +128,30 @@ export const sessionSchema = z
     clientRequestId: requestKey,
   })
   .strict();
+
+export const rehearsalSchema = z
+  .object({ anchorEventId: requestKey, clientRequestId: requestKey })
+  .strict();
+export const classDraftSchema = z
+  .object({
+    expectedRevision: revision,
+    template: z.enum(['strong', 'mixed', 'support']),
+    students: z.array(studentSchema).min(1).max(8),
+    plannedMinutes: z.number().int().min(1).max(180),
+    materialVersionId: id.nullable(),
+  })
+  .strict()
+  .refine(
+    (value) => new Set(value.students.map((s) => s.id)).size === value.students.length,
+    '学生标识不能重复',
+  );
 export const commandSchema = z
   .object({
     command: z.enum(['start', 'pause', 'resume', 'recover', 'interrupt', 'call_on', 'end']),
     expectedRevision: revision,
     clientEventId: requestKey,
     studentId: id.optional(),
+    voice: z.literal(true).optional(),
     confirmed: z.boolean().optional(),
   })
   .strict();
@@ -203,7 +221,7 @@ export interface TrainingSession {
   trainingConfig: {
     inputMode: 'text' | 'mixed';
     assistance: 'independent';
-    scope: 'full';
+    scope: 'full' | 'segment';
     plannedMinutes: number;
   };
   rubricVersionId: null;
@@ -215,7 +233,25 @@ export interface TrainingSession {
   speakerEpoch: number;
   createdAt: string;
   endedAt?: string;
+  rehearsal?: {
+    sourceSessionId: string;
+    anchorEventId: string;
+    cutoff: number;
+    kind: 'waiting' | 'response';
+    prompt: string;
+    studentId?: string;
+  };
   schemaVersion: 1;
+}
+/** Teacher-owned editable preparation, never returned as classroom public state. */
+export interface ClassConfigDraft {
+  id: string;
+  projectId: string;
+  revision: number;
+  template: ClassConfigVersion['template'];
+  students: Student[];
+  plannedMinutes: number;
+  materialVersionId: string | null;
 }
 export interface ClassroomEvent {
   id: string;
@@ -240,6 +276,13 @@ export interface ClassroomEvent {
     utteranceId?: string;
     turnId?: string;
     deliveredLength?: number;
+    rehearsalSeed?: true;
+    voice?: {
+      callId: string;
+      startedAt?: string;
+      endedAt?: string;
+      playedMs?: number;
+    };
   };
   visibility: 'classroom';
   schemaVersion: 1;
@@ -259,6 +302,7 @@ export interface TrainingState {
   receipts: Record<string, Receipt>;
   classrooms?: Record<string, ClassroomRun>;
   preparations?: Record<string, PreparationJob>;
+  classDrafts?: Record<string, ClassConfigDraft>;
 }
 export const emptyState = (): TrainingState => ({
   schemaVersion: 1,

@@ -38,3 +38,5 @@ server-providers*.yml
 /OpenMAIC/openmaic-*.log
 /OpenMAIC/openmaic-http-*.txt
 /OpenMAIC/openmaic-http-*.html
+/OpenMAIC/public/teacher-face-runtime/
+/页面设计方案/**/验收记录/

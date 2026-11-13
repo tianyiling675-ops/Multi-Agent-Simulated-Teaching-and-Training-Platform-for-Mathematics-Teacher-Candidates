@@ -3,13 +3,23 @@ import { getCurrentModelConfig } from '@/lib/utils/model-config';
 export async function trainingApi<T>(
   path: string,
   body?: unknown,
-  options: { method?: string; signal?: AbortSignal; model?: boolean } = {},
+  options: {
+    method?: string;
+    signal?: AbortSignal;
+    model?: boolean;
+    timeoutMs?: number;
+    keepalive?: boolean;
+  } = {},
 ): Promise<T> {
   const config = options.model ? getCurrentModelConfig() : null;
   const response = await fetch(`/api/teacher-training/${path}`, {
     method: options.method ?? (body === undefined ? 'GET' : 'POST'),
     cache: 'no-store',
-    signal: options.signal,
+    keepalive: options.keepalive,
+    signal: AbortSignal.any([
+      ...(options.signal ? [options.signal] : []),
+      AbortSignal.timeout(options.timeoutMs ?? (options.model ? 240_000 : 45_000)),
+    ]),
     headers: {
       'Content-Type': 'application/json',
       ...(config

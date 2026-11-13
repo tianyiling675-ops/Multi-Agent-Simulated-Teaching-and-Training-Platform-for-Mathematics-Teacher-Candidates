@@ -840,19 +840,23 @@ export function WorkspaceRail({
       className="ws-rail ws-enter-rail relative z-10 hidden h-full shrink-0 flex-col md:flex"
       style={{ width: 'var(--ws-rail-w)' }}
     >
-      <div className="flex h-16 shrink-0 items-center gap-2 px-4">
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-4 py-2">
         {/* The wordmark is the way home; the PRO pill beside it is the switch
             that leaves Pro. Two different destinations, so two hit targets —
             never one control wearing both meanings. */}
-        <HomeLink testId="pro-nav-home" onGoHome={onGoHome} className="-ml-1.5 px-1.5 py-1">
+        <HomeLink testId="pro-nav-home" onGoHome={onGoHome} className="-ml-1.5 min-w-0 px-1.5 py-1">
           <img
             src={brand.logoSrc}
             alt=""
             aria-hidden="true"
-            className="h-[21px] w-auto max-w-[110px] shrink-0"
+            className="h-auto max-h-10 w-[150px] max-w-full"
           />
         </HomeLink>
-        <ProBadge active onToggle={onExitPro} />
+        <ProBadge
+          active
+          onToggle={onExitPro}
+          className="col-start-1 row-start-2 justify-self-start"
+        />
         {/* THE rail's header, and therefore where the rail folds — the same
             button, in the same place, that the conversation and the classroom
             fold from. It used to be a pill floating in the middle of the rail's
@@ -863,7 +867,7 @@ export function WorkspaceRail({
           label={t('workspace.collapseNav')}
           direction="left"
           expanded
-          className="ml-auto"
+          className="col-start-2 row-start-1"
           onClick={onToggleCollapsed}
         />
       </div>

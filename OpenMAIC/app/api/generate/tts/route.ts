@@ -139,6 +139,7 @@ export async function POST(req: NextRequest) {
       apiKey,
       baseUrl,
       publicOnly,
+      signal: req.signal,
       providerOptions: {
         ...(ttsProviderOptions || {}),
         ...(qwenCloneVoice ? { qwenVoiceClone: true } : {}),
